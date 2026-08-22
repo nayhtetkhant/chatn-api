@@ -1,0 +1,42 @@
+FROM php:8.4-fpm
+
+WORKDIR /var/www
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libzip-dev \
+    ca-certificates \
+    $PHPIZE_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-configure pcntl --enable-pcntl
+
+RUN docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    zip \
+    pcntl
+
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY . .
+
+RUN composer install --no-dev --optimize-autoloader
+
+RUN chmod -R 775 storage bootstrap/cache
+
+# Startup script
+COPY startLaravel.sh /usr/local/bin/start-laravel
+
+RUN chmod +x /usr/local/bin/start-laravel
+
+EXPOSE 9000
+
+ENTRYPOINT ["start-laravel"]
+
+CMD ["php-fpm"]

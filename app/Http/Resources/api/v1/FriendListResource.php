@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Resources\api\v1;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class FriendListResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->resource->id,
+            'name' => $this->resource->name,
+            'userName' => $this->resource->user_name
+        ];
+    }
+}

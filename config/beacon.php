@@ -1,0 +1,194 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Master Switch
+    |--------------------------------------------------------------------------
+    |
+    | When false, no listeners are registered and nothing is recorded.
+    |
+    */
+
+    'enabled' => env('BEACON_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Storage
+    |--------------------------------------------------------------------------
+    |
+    | Database connection used to read and write traffic logs.
+    | Set to null to use the default application connection.
+    |
+    */
+
+    'storage' => [
+        'connection' => env('DB_CONNECTION', 'mysql'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sampling Rate
+    |--------------------------------------------------------------------------
+    |
+    | Fraction of requests to record. 1.0 = 100%, 0.1 = 10%, 0 = disabled.
+    | Applied independently per incoming request and per outgoing call.
+    |
+    */
+
+    'sampling_rate' => (float) env('BEACON_SAMPLING_RATE', 1.0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Route Middleware
+    |--------------------------------------------------------------------------
+    |
+    | Middleware applied to every Beacon route — both the dashboard view and
+    | the JSON API endpoints. Defaults to the 'web' group (sessions + CSRF +
+    | error sharing). Add your own gate here, e.g. ['web', 'auth', 'can:viewBeacon'].
+    |
+    */
+
+    'middleware' => ['web'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Request Sharing
+    |--------------------------------------------------------------------------
+    |
+    | Lets developers create shareable links to individual captured requests,
+    | optionally protected by a password and/or an expiry. Shared links work
+    | for recipients who have no Beacon access. Set enabled to false to remove
+    | the share routes and hide the share UI entirely.
+    |
+    */
+
+    'sharing' => [
+        'enabled' => (bool) env('BEACON_SHARING_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Header & Parameter Redaction
+    |--------------------------------------------------------------------------
+    |
+    | redact: master switch for redaction. When false, hidden_headers and
+    |         hidden_parameters lists are ignored — values are stored as-is.
+    | hidden_headers: header names (case-insensitive) whose values are masked.
+    | hidden_parameters: parameter keys (dot notation, supports *) whose
+    |                    values are masked. Applied to payloads, response
+    |                    JSON, model changes, and job payloads.
+    |
+    */
+
+    'redact' => (bool) env('BEACON_REDACT', true),
+
+    'hidden_headers' => [
+        'authorization',
+        'cookie',
+        'set-cookie',
+        'x-api-key',
+        'x-csrf-token',
+    ],
+
+    'hidden_parameters' => [
+        'password',
+        'password_confirmation',
+        'token',
+        'secret',
+        '_token',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Incoming HTTP
+    |--------------------------------------------------------------------------
+    |
+    | body_size_limit_kb: max payload/response size before "Truncated".
+    |   Set to null or 0 to disable truncation.
+    | only_paths:  if non-empty, only paths matching one of these patterns
+    |              are recorded. Empty = no restriction. (Str::is)
+    | ignore_paths: glob patterns matched against $request->path() (Str::is).
+    |              Applied after only_paths.
+    | ignore_methods: HTTP methods to skip (case-insensitive).
+    | ignore_status_codes: response status codes to skip.
+    | max_rows: hard cap on stored rows. When exceeded, oldest entries are
+    |   trimmed (FIFO). Set to null or 0 for unlimited. The check fires
+    |   roughly every 100 inserts and is concurrency-safe via a cache lock,
+    |   so over-shoot is bounded by ~CHECK_INTERVAL rows.
+    |
+    */
+
+    'incoming' => [
+        'enabled' => true,
+        'body_size_limit_kb' => 64,
+        'max_rows' => null,
+        'only_paths' => [
+            // 'api/*',
+        ],
+        'ignore_paths' => [
+            'beacon*',
+            'horizon*',
+            'telescope*',
+            '_ignition*',
+        ],
+        'ignore_methods' => [],
+        'ignore_status_codes' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Outgoing HTTP
+    |--------------------------------------------------------------------------
+    |
+    | ignore_hosts: glob patterns matched against the request URI host.
+    | max_rows: same semantics as incoming.max_rows.
+    |
+    */
+
+    'outgoing' => [
+        'enabled' => true,
+        'body_size_limit_kb' => 64,
+        'max_rows' => null,
+        'ignore_hosts' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Per-Request Collectors
+    |--------------------------------------------------------------------------
+    |
+    | What to attach to each incoming request log entry.
+    | model_actions controls which Eloquent events are recorded.
+    |
+    */
+
+    'collect' => [
+        'queries' => true,
+        'models' => true,
+        'jobs' => true,
+        'memory' => true,
+        'model_actions' => ['created', 'updated', 'deleted', 'restored', 'retrieved'],
+        'max_queries_per_request' => null, // null or 0 = unlimited
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retention
+    |--------------------------------------------------------------------------
+    |
+    | Used by the `beacon:prune` artisan command. Schedule it externally
+    | via your application's scheduler (no auto-scheduling provided).
+    |
+    | hours:      delete entries older than this many hours.
+    | chunk_size: rows per delete statement when pruning (avoid long locks).
+    |
+    */
+
+    'retention' => [
+        'hours' => (int) env('BEACON_RETENTION_HOURS', 168),
+        'chunk_size' => 1000,
+    ],
+
+];
