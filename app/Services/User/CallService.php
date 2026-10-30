@@ -11,6 +11,7 @@ use App\Models\Chat;
 use App\Services\Room\RoomCache;
 use App\Services\Room\RoomManager;
 use App\Services\Room\RoomValidator;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +22,7 @@ class CallService {
         public ChatService $chatService,
         public RoomManager $roomManager,
         public RoomValidator $roomValidator,
-        public RoomCache $roomCache
+        public RoomCache $roomCache,
     )
     {
     }
@@ -51,18 +52,47 @@ class CallService {
         return $call;
     }
 
-    public function acceptCall(Chat $chat , Call $call , array $data) {
-        $this->chatService->isAccessChat($chat , [$data['requesterId'] , $data['accepterId']]);
+    public function acceptCall(Chat $chat, Call $call, array $data) 
+    {
+        $accessUserIds = [$data['requesterId'], $data['accepterId']];
 
-        
-        foreach ([$data['requesterId'] , $data['accepterId']] as $user) {
-            $token = $this->roomManager->createToken($data['roomName'] , $user);
-            if(!$token['ok']) {
-                return [
-                    'ok' => false
-                ];
+        $this->chatService->isAccessChat($chat, $accessUserIds);
+
+        $busyUserIds = (array) $this->roomManager->busyUser();
+
+        $freeUsers = $chat->chatParticipants()
+            ->whereNotIn('id', $busyUserIds)
+            ->get();
+
+        foreach ($freeUsers as $user) {
+            if (in_array($user->id, $accessUserIds)) {
+                $token = $this->roomManager->createToken($data['roomName'], $user->id);
+
+                if (! isset($token['ok']) || ! $token['ok']) {
+                    return [
+                        'ok' => false,
+                        'message' => "Failed to create token for user {$user->id}"
+                    ];
+                }
+
+                broadcast(new CallAccept(
+                    $accessUserIds,
+                    $user->id,
+                    $token['token'],
+                    $data['roomName'],
+                    $chat,
+                    $call
+                ));
+            } else {
+                broadcast(new CallAccept(
+                    $accessUserIds,
+                    $user->id,
+                    null,
+                    null,
+                    null,
+                    null
+                ));
             }
-            broadcast(new CallAccept($user , $token['token'] , $data['roomName'] , $chat , $call));
         }
 
         return [
@@ -77,7 +107,7 @@ class CallService {
                 'ok' => 'livekit err here'
             ];
         }
-        broadcast(new CallAccept($userId , $token['token'] , $roomName , $chat , $call));
+        broadcast(new CallAccept([$userId] , $userId , $token['token'] , $roomName , $chat , $call));
 
         return [
             'ok' => true

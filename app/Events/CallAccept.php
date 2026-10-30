@@ -21,11 +21,12 @@ class CallAccept implements ShouldBroadcast
      * Create a new event instance.
      */
     public function __construct(
+        public array $accessUserIds,
         public int $userId,
-        public string $token,
-        public string $roomName,
-        public Chat $chat,
-        public Call $call
+        public string|null $token,
+        public string|null $roomName,
+        public Chat|null $chat,
+        public Call|null $call
     )
     {
         //
@@ -49,6 +50,7 @@ class CallAccept implements ShouldBroadcast
 
     public function BroadcastWith() {
         return [
+            'accessUserIds' => $this->accessUserIds,
             'token' => $this->token,
             'roomName' => $this->roomName,
             'chatId' => $this->chat->id,
